@@ -15,6 +15,7 @@ import { useDispatch } from "react-redux";
 import { setLogin } from "state";
 import Dropzone from "react-dropzone";
 import FlexBetween from "components/FlexBetween";
+import { serverUrl } from "constant";
 
 const registerSchema = yup.object().shape({
   firstName: yup.string().required("required"),
@@ -48,6 +49,7 @@ const initialValuesLogin = {
 
 const Form = () => {
   const [pageType, setPageType] = useState("login");
+  const [authError, setAuthError] = useState('');
   const { palette } = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -57,43 +59,71 @@ const Form = () => {
 
   const register = async (values, onSubmitProps) => {
     // this allows us to send form info with image
-    const formData = new FormData();
-    for (let value in values) {
-      formData.append(value, values[value]);
-    }
-    formData.append("picturePath", values.picture.name);
-
-    const savedUserResponse = await fetch(
-      "http://localhost:3001/auth/register",
-      {
-        method: "POST",
-        body: formData,
+    try {
+      const formData = new FormData();
+      for (let value in values) {
+        formData.append(value, values[value]);
       }
-    );
-    const savedUser = await savedUserResponse.json();
-    onSubmitProps.resetForm();
+      formData.append("picturePath", values.picture.name);
+  
+      const savedUserResponse = await fetch(
+        `${serverUrl}/auth/register`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      
+      const savedUser = await savedUserResponse.json();
 
-    if (savedUser) {
-      setPageType("login");
+      if(!savedUserResponse.ok){
+        setAuthError(savedUser.error);
+        return setTimeout(() => {
+          setAuthError('')
+        }, 5000);
+      }
+
+      onSubmitProps.resetForm();
+  
+      if (savedUser) {
+        setPageType("login");
+      }
+    } catch (error) {
+      console.error(error);
+      
     }
   };
 
   const login = async (values, onSubmitProps) => {
-    const loggedInResponse = await fetch("http://localhost:3001/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
-    const loggedIn = await loggedInResponse.json();
-    onSubmitProps.resetForm();
-    if (loggedIn) {
-      dispatch(
-        setLogin({
-          user: loggedIn.user,
-          token: loggedIn.token,
-        })
-      );
-      navigate("/home");
+    try {
+
+      const loggedInResponse = await fetch(`${serverUrl}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+
+      const loggedIn = await loggedInResponse.json();
+
+      if(!loggedInResponse.ok){
+       setAuthError(loggedIn.error);
+       return setTimeout(() => {
+        setAuthError('')
+       }, 3000);
+      }
+
+      onSubmitProps.resetForm();
+      if (loggedIn) {
+        dispatch(
+          setLogin({
+            user: loggedIn.user,
+            token: loggedIn.token,
+          })
+        );
+        navigate("/home");
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -135,11 +165,10 @@ const Form = () => {
                   onChange={handleChange}
                   value={values.firstName}
                   name="firstName"
-                  error={
-                    Boolean(touched.firstName) && Boolean(errors.firstName)
-                  }
+                  error={Boolean(touched.firstName) && Boolean(errors.firstName)}
                   helperText={touched.firstName && errors.firstName}
                   sx={{ gridColumn: "span 2" }}
+                  required
                 />
                 <TextField
                   label="Last Name"
@@ -150,6 +179,7 @@ const Form = () => {
                   error={Boolean(touched.lastName) && Boolean(errors.lastName)}
                   helperText={touched.lastName && errors.lastName}
                   sx={{ gridColumn: "span 2" }}
+                  required
                 />
                 <TextField
                   label="Location"
@@ -160,6 +190,7 @@ const Form = () => {
                   error={Boolean(touched.location) && Boolean(errors.location)}
                   helperText={touched.location && errors.location}
                   sx={{ gridColumn: "span 4" }}
+                  required
                 />
                 <TextField
                   label="Occupation"
@@ -167,11 +198,10 @@ const Form = () => {
                   onChange={handleChange}
                   value={values.occupation}
                   name="occupation"
-                  error={
-                    Boolean(touched.occupation) && Boolean(errors.occupation)
-                  }
+                  error={Boolean(touched.occupation) && Boolean(errors.occupation)}
                   helperText={touched.occupation && errors.occupation}
                   sx={{ gridColumn: "span 4" }}
+                  required
                 />
                 <Box
                   gridColumn="span 4"
@@ -231,6 +261,17 @@ const Form = () => {
               sx={{ gridColumn: "span 4" }}
             />
           </Box>
+
+          <Typography 
+          sx={{marginTop: "20px", 
+            width: "100%", 
+            textAlign: "center", 
+            backgroundColor: "red", 
+            color: "white",
+            fontSize: "1.1rem"}}
+          >
+              {authError}
+          </Typography>
 
           {/* BUTTONS */}
           <Box>
