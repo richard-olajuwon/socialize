@@ -56,10 +56,12 @@ const Form = () => {
   const isNonMobile = useMediaQuery("(min-width:600px)");
   const isLogin = pageType === "login";
   const isRegister = pageType === "register";
+  const [isloading, setIsLoading] = useState(false);
 
   const register = async (values, onSubmitProps) => {
     // this allows us to send form info with image
     try {
+      setIsLoading(true);
       const formData = new FormData();
       for (let value in values) {
         formData.append(value, values[value]);
@@ -77,6 +79,7 @@ const Form = () => {
       const savedUser = await savedUserResponse.json();
 
       if(!savedUserResponse.ok){
+        setIsLoading(false);
         setAuthError(savedUser.error);
         return setTimeout(() => {
           setAuthError('')
@@ -86,9 +89,11 @@ const Form = () => {
       onSubmitProps.resetForm();
   
       if (savedUser) {
+        setIsLoading(false);
         setPageType("login");
       }
     } catch (error) {
+      setIsLoading(false);
       console.error(error);
       
     }
@@ -96,7 +101,7 @@ const Form = () => {
 
   const login = async (values, onSubmitProps) => {
     try {
-
+      setIsLoading(true);
       const loggedInResponse = await fetch(`${serverUrl}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -106,13 +111,15 @@ const Form = () => {
       const loggedIn = await loggedInResponse.json();
 
       if(!loggedInResponse.ok){
-       setAuthError(loggedIn.error);
-       return setTimeout(() => {
-        setAuthError('')
-       }, 3000);
+        setIsLoading(false)
+        setAuthError(loggedIn.error);
+        return setTimeout(() => {
+          setAuthError('')
+        }, 3000);
       }
 
       onSubmitProps.resetForm();
+
       if (loggedIn) {
         dispatch(
           setLogin({
@@ -123,6 +130,7 @@ const Form = () => {
         navigate("/home");
       }
     } catch (error) {
+      setIsLoading(false);
       console.error(error);
     }
   };
@@ -276,6 +284,7 @@ const Form = () => {
           {/* BUTTONS */}
           <Box>
             <Button
+              disabled = {isloading}
               fullWidth
               type="submit"
               sx={{
